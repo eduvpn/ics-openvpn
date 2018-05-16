@@ -135,3 +135,30 @@ android {
         sourceCompatibility 1.8
     }
 }
+
+// ~/.gradle/gradle.properties
+if (project.hasProperty('keystoreFile') &&
+        project.hasProperty('keystorePassword') &&
+        project.hasProperty('keystoreAliasPassword')) {
+    android.signingConfigs.release.storeFile = file(keystoreFile)
+    android.signingConfigs.release.storePassword = keystorePassword
+    android.signingConfigs.release.keyPassword = keystoreAliasPassword
+    android.signingConfigs.release.keyAlias = keystoreAlias
+} else {
+    android.buildTypes.release.signingConfig = null
+}
+
+// Ensure native build is run before assets, so assets are ready to be merged into the apk
+android.applicationVariants.all { variant ->
+    variant.mergeAssets.dependsOn(variant.externalNativeBuildTasks)
+}
+
+
+android.applicationVariants.all { variant ->
+    variant.productFlavors.each {
+        if (it.dimension == 'implementation' &&  it.name != 'noovpn3')
+            variant.getJavaCompiler().dependsOn(generateOpenVPN3Swig)
+
+    }
+
+}
