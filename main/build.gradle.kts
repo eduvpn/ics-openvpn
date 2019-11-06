@@ -105,6 +105,7 @@ android {
         create("ui") {
             setDimension("implementation")
             buildConfigField("boolean", "openvpn3", "true")
+            isDefault.set(true)
         }
         create("skeleton") {
             setDimension("implementation")
