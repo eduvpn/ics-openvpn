@@ -3,6 +3,7 @@
  * Distributed under the GNU GPL v2 with additional terms. For full terms see the file doc/LICENSE.txt
  */
 import java.util.Properties
+import java.util.stream.Collectors
 
 plugins {
     id ("com.android.library")
@@ -121,7 +122,12 @@ android {
 
     // Ensure native build is run before assets, so assets are ready to be merged into the apk
     libraryVariants.configureEach {
-        mergeAssets!!.dependsOn(externalNativeBuildTasks)
+        val nativeBuildTasks = externalNativeBuildProviders.stream()
+                .map({ it.get() })
+                .collect(Collectors.toList())
+        for (task in nativeBuildTasks) {
+            mergeAssetsProvider.get().dependsOn(task)
+        }
     }
 }
 
