@@ -206,8 +206,8 @@ set(openvpn_srcs
         )
 
 PREPEND(openvpn_srcs_with_path "openvpn" ${openvpn_srcs})
-
-add_library(openvpn STATIC ${openvpn_srcs_with_path})
+# eduVPN change: We reverted this from STATIC to SHARED to reduce the APK size. No issues found so far. See: https://github.com/schwabe/ics-openvpn/issues/1225
+add_library(openvpn SHARED ${openvpn_srcs_with_path})
 
 target_include_directories(openvpn PRIVATE
         openvpn-config
