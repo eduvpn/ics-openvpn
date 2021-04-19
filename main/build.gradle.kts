@@ -25,6 +25,7 @@ android {
 	    ndkVersion = "21.4.0"
         externalNativeBuild {
             cmake {
+                version = "3.10.3+"
                 //arguments = listOf("-DANDROID_TOOLCHAIN=clang",
                 //        "-DANDROID_STL=c++_static")
             }
@@ -36,6 +37,7 @@ android {
 
     externalNativeBuild {
         cmake {
+            version = "3.10.3+"
             path =File("${projectDir}/src/main/cpp/CMakeLists.txt")
         }
     }
