@@ -22,7 +22,7 @@ android {
         targetSdkVersion(30)  //'Q'.toInt()
         versionCode = 176
         versionName = "0.7.22"
-
+	    ndkVersion = "21.4.0"
         externalNativeBuild {
             cmake {
                 //arguments = listOf("-DANDROID_TOOLCHAIN=clang",
