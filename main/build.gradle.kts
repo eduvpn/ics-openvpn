@@ -72,7 +72,7 @@ android {
 
     }
 
-    lint {
+    lintOptions {
         enable("BackButton", "EasterEgg", "StopShip", "IconExpectedSize", "GradleDynamicVersion", "NewerVersionAvailable")
         warning("ImpliedQuantity", "MissingQuantity")
         disable("MissingTranslation", "UnsafeNativeCodeLocation")
