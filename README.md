@@ -1,6 +1,7 @@
 OpenVPN for Android -EduVPN fork
 =============
-[![Build Status](https://travis-ci.org/schwabe/ics-openvpn.svg?branch=master)](https://travis-ci.org/schwabe/ics-openvpn)
+![build status](https://github.com/schwabe/ics-openvpn/actions/workflows/build.yaml/badge.svg)
+
 
 The EduVPN changes are:
 

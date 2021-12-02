@@ -32,14 +32,14 @@ public class NativeUtils {
     public static native String getOpenVPN3GitVersion();
 
     public final static int[] openSSLlengths = {
-        16, 64, 256, 1024, 8 * 1024, 16 * 1024
+        16, 64, 256, 1024, 1500, 8 * 1024, 16 * 1024
     };
 
     public static native double[] getOpenSSLSpeed(String algorithm, int testnum);
 
     static {
         if (!isRoboUnitTest()) {
-            System.loadLibrary("opvpnutil");
+            System.loadLibrary("ovpnutil");
             if (Build.VERSION.SDK_INT == Build.VERSION_CODES.JELLY_BEAN)
                 System.loadLibrary("jbcrypto");
 

@@ -3,6 +3,7 @@ package de.blinkt.openvpn.core;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.provider.Settings;
+import android.text.TextUtils;
 
 import net.openvpn.ovpn3.ClientAPI_Config;
 import net.openvpn.ovpn3.ClientAPI_EvalConfig;
@@ -54,6 +55,7 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
         ClientAPI_Status status = connect();
         if (status.getError()) {
             VpnStatus.logError(String.format("connect() error: %s: %s", status.getStatus(), status.getMessage()));
+            VpnStatus.addExtraHints(status.getMessage());
         } else {
             VpnStatus.updateStateString("NOPROCESS", "OpenVPN3 thread finished", R.string.state_noprocess, ConnectionStatus.LEVEL_NOTCONNECTED);
         }
@@ -108,6 +110,18 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
     }
 
     @Override
+    public boolean tun_builder_set_proxy_http(String host, int port)
+    {
+        return mService.addHttpProxy(host, port);
+    }
+
+    @Override
+    public boolean tun_builder_set_proxy_https(String host, int port)
+    {
+        return false;
+    }
+
+    @Override
     public int tun_builder_establish() {
         return mService.openTun().detachFd();
     }
@@ -159,8 +173,8 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
 
         config.setContent(vpnconfig);
         config.setTunPersist(mVp.mPersistTun);
-        config.setGuiVersion(mVp.getVersionEnvString(mService));
-        config.setSsoMethods("openurl,crtext");
+        config.setGuiVersion(VpnProfile.getVersionEnvString(mService));
+        config.setSsoMethods("openurl,webauth,crtext");
         config.setPlatformVersion(mVp.getPlatformVersionEnvString());
         config.setExternalPkiAlias("extpki");
         config.setCompressionMode("asym");
@@ -170,6 +184,9 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
         config.setAllowLocalLanAccess(mVp.mAllowLocalLAN);
         boolean retryOnAuthFailed = mVp.mAuthRetry == AUTH_RETRY_NOINTERACT;
         config.setRetryOnAuthFailed(retryOnAuthFailed);
+        config.setEnableLegacyAlgorithms(mVp.mUseLegacyProvider);
+        if (!TextUtils.isEmpty(mVp.mTlSCertProfile))
+            config.setTlsCertProfileOverride(mVp.mTlSCertProfile);
 
         ClientAPI_EvalConfig ec = eval_config(config);
         if (ec.getExternalPki()) {
@@ -228,16 +245,21 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
     @Override
     public void external_pki_sign_request(ClientAPI_ExternalPKISignRequest signreq) {
         VpnStatus.logDebug("Got external PKI signing request from OpenVPN core for algorithm " + signreq.getAlgorithm());
-        boolean pkcs1padding;
-        if (signreq.getAlgorithm().equals("RSA_PKCS1_PADDING"))
-            pkcs1padding = true;
-        else if (signreq.getAlgorithm().equals("RSA_NO_PADDING"))
-            pkcs1padding = false;
-        else if (signreq.getAlgorithm().equals("ECDSA"))
-            pkcs1padding = false;
-        else
-            throw new IllegalArgumentException("Illegal padding in sign request" + signreq.getAlgorithm());
-        signreq.setSig(mVp.getSignedData(mService, signreq.getData(), pkcs1padding));
+        SignaturePadding padding;
+        switch (signreq.getAlgorithm()) {
+            case "RSA_PKCS1_PADDING":
+                padding = SignaturePadding.RSA_PKCS1_PADDING;
+                break;
+            case "RSA_NO_PADDING":
+                padding = SignaturePadding.NO_PADDING;
+                break;
+            case "ECDSA":
+                padding = SignaturePadding.NO_PADDING;
+                break;
+            default:
+                throw new IllegalArgumentException("Illegal padding in sign request" + signreq.getAlgorithm());
+        }
+        signreq.setSig(mVp.getSignedData(mService, signreq.getData(), padding, "", "", false));
     }
 
     void setUserPW() {
@@ -271,6 +293,7 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
     public void setPauseCallback(PausedStateCallback callback) {
     }
 
+
     @Override
     public void sendCRResponse(String response) {
         post_cc_msg("CR_RESPONSE," + response + "\n");
@@ -283,6 +306,7 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
             logmsg = logmsg.substring(0, logmsg.length() - 1);
 
         VpnStatus.logInfo(logmsg);
+        VpnStatus.addExtraHints(logmsg);
     }
 
     @Override
@@ -290,12 +314,13 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
         String name = event.getName();
         String info = event.getInfo();
         if (name.equals("INFO")) {
-            if (info.startsWith("OPEN_URL:") || info.startsWith("CR_TEXT:")) {
+            if (info.startsWith("OPEN_URL:") || info.startsWith("CR_TEXT:")
+                || info.startsWith("WEB_AUTH:")) {
                 mService.trigger_sso(info);
             } else {
                 VpnStatus.logInfo(R.string.info_from_server, info);
             }
-        } else if (name.equals("COMPRESSION_ENABLED")) {
+        } else if (name.equals("COMPRESSION_ENABLED") || name.equals(("WARN"))) {
             VpnStatus.logInfo(String.format(Locale.US, "%s: %s", name, info));
         } else {
             VpnStatus.updateStateString(name, info);
